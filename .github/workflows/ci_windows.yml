@@ -1,0 +1,72 @@
+name: CI — Windows
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  BUILD_TYPE: Release
+  VCPKG_ROOT: C:\vcpkg
+
+jobs:
+  build-and-test:
+    name: Build & Test (Windows Server 2022 / MSVC)
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+
+      - name: Bootstrap vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
+          & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_ROOT }}\installed
+          key: vcpkg-win-${{ hashFiles('vcpkg.json') }}
+
+      - name: Configure CMake
+        run: |
+          cmake -B build `
+            -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DNEURAL_ECHO_BUILD_QT=OFF `
+            -DNEURAL_ECHO_BUILD_TESTS=ON `
+            -DNEURAL_ECHO_BUILD_BENCH=ON
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+      - name: Run unit tests
+        working-directory: build
+        run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
+
+      - name: Benchmark smoke run
+        working-directory: build\Release
+        run: |
+          .\neural_echo_bench.exe `
+            --benchmark_min_time=0.01 `
+            --benchmark_repetitions=1 `
+            --benchmark_format=json `
+            --benchmark_out=bench_results_win.json
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results-windows
+          path: build\Release\bench_results_win.json

@@ -1,0 +1,19 @@
+[package]
+name        = "neural_echo_runtime"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name      = "neural_echo_runtime"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+tokio               = { workspace = true }
+crossbeam           = { workspace = true }
+anyhow              = { workspace = true }
+tracing             = { workspace = true }
+tracing-subscriber  = { workspace = true }
+neural_echo_config   = { path = "../neural_echo_config" }
+neural_echo_buffers  = { path = "../neural_echo_buffers" }
+neural_echo_inference = { path = "../neural_echo_inference" }
+neural_echo_ffi      = { path = "../neural_echo_ffi" }

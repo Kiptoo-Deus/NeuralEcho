@@ -1,0 +1,41 @@
+[workspace]
+resolver = "2"
+members = [
+    "neural_echo_runtime",
+    "neural_echo_inference",
+    "neural_echo_buffers",
+    "neural_echo_features",
+    "neural_echo_ffi",
+    "neural_echo_config",
+]
+
+[workspace.package]
+version     = "1.0.0"
+edition     = "2021"
+authors     = ["Joel Kiptoo"]
+license     = "MIT"
+repository  = "https://github.com/joelkiptoo/NeuralEcho"
+
+[workspace.dependencies]
+# Async runtime
+tokio        = { version = "1",  features = ["rt-multi-thread", "sync", "time"] }
+# Lock-free data structures
+crossbeam    = { version = "0.8" }
+# Parallelism
+rayon        = { version = "1.8" }
+# ONNX inference
+ort          = { version = "2.0", features = ["load-dynamic"] }
+# N-dimensional arrays
+ndarray      = { version = "0.15" }
+# Serialisation
+serde        = { version = "1",  features = ["derive"] }
+serde_json   = { version = "1" }
+toml         = { version = "0.8" }
+# Logging
+tracing      = { version = "0.1" }
+tracing-subscriber = { version = "0.3" }
+# Error handling
+anyhow       = { version = "1" }
+thiserror    = { version = "1" }
+# FFI helpers
+cbindgen     = { version = "0.26" }

@@ -1,0 +1,18 @@
+[package]
+name        = "neural_echo_ffi"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name       = "neural_echo_ffi"
+crate-type = ["staticlib"]
+
+[dependencies]
+neural_echo_config   = { path = "../neural_echo_config" }
+neural_echo_buffers  = { path = "../neural_echo_buffers" }
+neural_echo_inference = { path = "../neural_echo_inference" }
+anyhow  = { workspace = true }
+tracing = { workspace = true }
+
+[build-dependencies]
+cbindgen = { workspace = true }

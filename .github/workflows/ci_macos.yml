@@ -1,0 +1,67 @@
+name: CI — macOS
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-and-test:
+    name: Build & Test (macOS 14 ARM)
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Homebrew dependencies
+        run: |
+          brew update
+          brew install cmake ninja fftw eigen portaudio
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+
+      - name: Bootstrap vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git $HOME/vcpkg
+          $HOME/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DNEURAL_ECHO_BUILD_QT=OFF \
+            -DNEURAL_ECHO_BUILD_TESTS=ON \
+            -DNEURAL_ECHO_BUILD_BENCH=ON
+
+      - name: Build
+        run: cmake --build build --parallel $(sysctl -n hw.logicalcpu)
+
+      - name: Run unit tests
+        working-directory: build
+        run: ctest --output-on-failure
+
+      - name: Benchmark smoke run
+        working-directory: build
+        run: |
+          ./neural_echo_bench --benchmark_min_time=0.01 \
+                              --benchmark_repetitions=1 \
+                              --benchmark_format=json \
+                              --benchmark_out=bench_results_macos.json
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results-macos
+          path: build/bench_results_macos.json

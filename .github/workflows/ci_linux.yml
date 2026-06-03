@@ -1,0 +1,144 @@
+name: CI — Linux
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  BUILD_TYPE: Release
+  VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+
+jobs:
+  build-and-test:
+    name: Build & Test (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # ── System deps ──────────────────────────────────────────────────────────
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build pkg-config \
+            libfftw3-dev libeigen3-dev \
+            portaudio19-dev \
+            qt6-base-dev qt6-declarative-dev \
+            libgl1-mesa-dev \
+            curl zip unzip tar
+
+      # ── Rust ─────────────────────────────────────────────────────────────────
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+
+      # ── vcpkg ────────────────────────────────────────────────────────────────
+      - name: Bootstrap vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git $VCPKG_ROOT
+          $VCPKG_ROOT/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_ROOT }}/installed
+          key: vcpkg-linux-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-linux-
+
+      # ── CMake configure ───────────────────────────────────────────────────────
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
+            -DNEURAL_ECHO_BUILD_QT=OFF \
+            -DNEURAL_ECHO_BUILD_TESTS=ON \
+            -DNEURAL_ECHO_BUILD_BENCH=ON
+
+      # ── Build ─────────────────────────────────────────────────────────────────
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+
+      # ── Unit tests ────────────────────────────────────────────────────────────
+      - name: Run unit tests
+        working-directory: build
+        run: ctest --output-on-failure --parallel $(nproc)
+
+      # ── Benchmarks (smoke-run only, 1 iteration) ─────────────────────────────
+      - name: Benchmark smoke run
+        working-directory: build
+        run: |
+          ./neural_echo_bench --benchmark_min_time=0.01 \
+                              --benchmark_repetitions=1 \
+                              --benchmark_format=json \
+                              --benchmark_out=bench_results.json
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results-linux
+          path: build/bench_results.json
+
+  # ── Rust checks ───────────────────────────────────────────────────────────────
+  rust-checks:
+    name: Rust lint & test
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+
+      - name: Install system deps for ort
+        run: sudo apt-get install -y --no-install-recommends libssl-dev
+
+      - name: fmt check
+        working-directory: rust
+        run: cargo fmt --all -- --check
+
+      - name: clippy
+        working-directory: rust
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: cargo test
+        working-directory: rust
+        run: cargo test --all
+
+  # ── Python ML checks ──────────────────────────────────────────────────────────
+  python-checks:
+    name: Python lint & import test
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+             pip install numpy soundfile
+
+      - name: Import model module
+        run: python -c "from ml.training.model import build_model; m=build_model(); print('OK, params:', sum(p.numel() for p in m.parameters()))"
+
+      - name: Import losses module
+        run: python -c "from ml.training.losses import HybridLoss; print('HybridLoss OK')"

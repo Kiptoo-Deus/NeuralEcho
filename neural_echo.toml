@@ -1,0 +1,17 @@
+# NeuralEcho Runtime Configuration
+# Place this file next to the NeuralEchoDashboard executable.
+
+[model]
+onnx_path  = "models/neural_echo_net_int8.onnx"
+quantised  = true
+freq_bins  = 257      # fft_size / 2 + 1 = 512 / 2 + 1
+
+[inference]
+num_threads      = 1   # Intra-op thread count for ONNX Runtime
+queue_capacity   = 8   # SPSC ring buffer depth (frames)
+mask_persistence = true # Use last valid mask if queue is empty
+
+[audio]
+sample_rate = 16000
+frame_size  = 160     # 10 ms @ 16 kHz
+fft_size    = 512

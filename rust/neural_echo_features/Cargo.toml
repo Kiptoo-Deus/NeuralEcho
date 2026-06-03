@@ -1,0 +1,7 @@
+[package]
+name        = "neural_echo_features"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+neural_echo_config  = { path = "../neural_echo_config" }

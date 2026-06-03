@@ -1,0 +1,16 @@
+{
+  "name": "neural-echo",
+  "version": "1.0.0",
+  "description": "Hybrid Rust + C++ Acoustic Echo Cancellation Research Platform",
+  "dependencies": [
+    "fftw3",
+    "eigen3",
+    "xsimd",
+    "spdlog",
+    "nlohmann-json",
+    "tomlplusplus",
+    "gtest",
+    "benchmark",
+    "portaudio"
+  ]
+}

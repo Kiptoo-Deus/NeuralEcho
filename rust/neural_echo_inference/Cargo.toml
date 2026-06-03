@@ -1,0 +1,13 @@
+[package]
+name        = "neural_echo_inference"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+ort              = { workspace = true }
+ndarray          = { workspace = true }
+anyhow           = { workspace = true }
+thiserror        = { workspace = true }
+tracing          = { workspace = true }
+neural_echo_config  = { path = "../neural_echo_config" }
+neural_echo_buffers = { path = "../neural_echo_buffers" }
