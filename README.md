@@ -31,6 +31,45 @@ session metrics, batch experiment management, and a model inspector.
 
 ---
 
+## Architecture
+
+```
+Qt 6 Dashboard (QML)
+       │  Qt Signals
+App Controller (C++)
+       │                     │
+DSP Engine (C++20)     Neural Runtime (Rust)
+  FFT · NLMS · DTD      ONNX Inference · GRU
+  VAD · AGC · Metrics   Lock-free Queues
+       │                     │
+       └──── Zero-copy shared ring buffer ────┘
+                      │
+            PortAudio / RtAudio
+```
+
+---
+
+## Repository Structure
+
+```
+NeuralEcho/
+├── apps/qt_dashboard/       Qt 6 / QML dashboard
+├── dsp/                     C++20 DSP engine (FFT, NLMS, DTD, AGC, VAD)
+├── rust/                    Rust workspace (inference, FFI, buffers)
+├── ml/                      Python training & evaluation
+│   ├── training/            model.py, train.py, dataset.py, losses.py
+│   └── evaluation/          eval_erle.py, eval_pesq_stoi.py
+├── benchmarks/              Google Benchmark suites
+├── tests/                   Google Test unit tests
+├── .github/workflows/       CI pipelines (Linux, macOS, Windows)
+├── CMakeLists.txt
+├── vcpkg.json
+├── neural_echo.toml         Runtime configuration
+└── requirements.txt         Python ML dependencies
+```
+
+---
+
 ## Building
 
 ### Prerequisites
@@ -175,6 +214,15 @@ NeuralEchoNet
   Inference   : < 2 ms (ONNX Runtime, CPU)
 ```
 
+---
+
+## Roadmap
+
+See the [week-by-week implementation roadmap](docs/ROADMAP.md) for the full
+32-week delivery schedule across DSP engine, neural runtime, Qt dashboard,
+benchmarking, and paper writing phases.
+
+---
 
 ## License
 

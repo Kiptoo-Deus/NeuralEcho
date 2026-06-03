@@ -9,8 +9,8 @@
     "spdlog",
     "nlohmann-json",
     "tomlplusplus",
+    "portaudio",
     "gtest",
-    "benchmark",
-    "portaudio"
+    "benchmark"
   ]
 }

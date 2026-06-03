@@ -1,0 +1,21 @@
+# cbindgen configuration for neural_echo_ffi
+# Generates rust/neural_echo_ffi/include/neural_echo_ffi.h
+
+language   = "C"
+include_guard = "NEURAL_ECHO_FFI_H"
+documentation = true
+documentation_style = "c99"
+tab_width  = 4
+usize_is_size_t = true
+
+[export]
+include = ["NeuralStatus", "NeuralContext",
+           "ne_context_create", "ne_context_destroy", "ne_process_frame"]
+
+[layout]
+aligned_n = true
+
+[defines]
+"target_os = windows" = "NE_WINDOWS"
+"target_os = macos"   = "NE_MACOS"
+"target_os = linux"   = "NE_LINUX"
